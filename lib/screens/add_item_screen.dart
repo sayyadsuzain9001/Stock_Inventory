@@ -12,9 +12,17 @@ import '../widgets/stock_item_card.dart';
 
 /// Task 1 + Task 2: scrollable stock entry form that saves to Firestore.
 class AddItemScreen extends StatefulWidget {
-  const AddItemScreen({super.key, required this.service, this.onSaved});
+  const AddItemScreen({
+    super.key,
+    required this.service,
+    this.onSaved,
+    this.submittedBy,
+  });
 
   final InventoryService service;
+
+  /// Email of the signed-in account, stored as `createdBy`.
+  final String? submittedBy;
 
   /// Called after Firestore confirms a write (e.g. to jump to Inventory).
   final VoidCallback? onSaved;
@@ -92,6 +100,7 @@ class _AddItemScreenState extends State<AddItemScreen>
       quantity: int.parse(_qty.text.trim()),
       unitPrice: double.parse(_price.text.trim()),
       reorderLevel: int.parse(_reorder.text.trim()),
+      createdBy: widget.submittedBy,
     );
 
     setState(() => _saving = true);
@@ -206,7 +215,11 @@ class _AddItemScreenState extends State<AddItemScreen>
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('View inventory'),
+                    child: Text(
+                      widget.onSaved != null
+                          ? 'View inventory'
+                          : 'Add another item',
+                    ),
                   ),
                 ),
               ],

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'screens/add_item_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/inventory_screen.dart';
+import 'screens/login_screen.dart';
+import 'services/auth_service.dart';
 import 'services/inventory_service.dart';
 import 'theme.dart';
 
@@ -11,11 +13,13 @@ class StockInventoryApp extends StatelessWidget {
   const StockInventoryApp({
     super.key,
     required this.firestore,
+    required this.auth,
     this.service,
     this.useGoogleFonts = true,
   });
 
   final FirebaseFirestore firestore;
+  final AuthService auth;
 
   /// Optional override (used by tests to simulate write failures).
   final InventoryService? service;
@@ -23,19 +27,50 @@ class StockInventoryApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inventory = service ?? InventoryService(firestore);
     return MaterialApp(
       title: 'Stock Inventory Manager',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(useGoogleFonts: useGoogleFonts),
-      home: HomeShell(service: service ?? InventoryService(firestore)),
+      home: StreamBuilder<AppUser?>(
+        stream: auth.authStateChanges(),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting &&
+              !snap.hasData) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final user = snap.data;
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            child: user == null
+                ? LoginScreen(key: const ValueKey('login'), auth: auth)
+                : HomeShell(
+                    key: ValueKey('home_${user.uid}'),
+                    service: inventory,
+                    user: user,
+                    auth: auth,
+                  ),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Bottom navigation between Dashboard, Add Item and Inventory.
+/// Admin: Dashboard, Add Item and Records (all submissions + filters).
+/// User:  Add Item only (records are visible to admins).
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, required this.service});
+  const HomeShell({
+    super.key,
+    required this.service,
+    required this.user,
+    required this.auth,
+  });
   final InventoryService service;
+  final AppUser user;
+  final AuthService auth;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -48,15 +83,27 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      DashboardScreen(
-        service: widget.service,
-        onAddItem: () => _go(1),
-        onOpenInventory: () => _go(2),
-      ),
-      AddItemScreen(service: widget.service, onSaved: () => _go(2)),
-      InventoryScreen(service: widget.service),
-    ];
+    final admin = widget.user.isAdmin;
+    final pages = admin
+        ? [
+            DashboardScreen(
+              service: widget.service,
+              onAddItem: () => _go(1),
+              onOpenInventory: () => _go(2),
+            ),
+            AddItemScreen(
+              service: widget.service,
+              submittedBy: widget.user.email,
+              onSaved: () => _go(2),
+            ),
+            InventoryScreen(service: widget.service),
+          ]
+        : [
+            AddItemScreen(
+              service: widget.service,
+              submittedBy: widget.user.email,
+            ),
+          ];
 
     return Scaffold(
       body: Stack(
@@ -82,28 +129,125 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: _AccountButton(user: widget.user, auth: widget.auth),
+              ),
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _go,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.space_dashboard_outlined),
-            selectedIcon: Icon(Icons.space_dashboard_rounded),
-            label: 'Dashboard',
+      bottomNavigationBar: admin
+          ? NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _go,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.space_dashboard_outlined),
+                  selectedIcon: Icon(Icons.space_dashboard_rounded),
+                  label: 'Dashboard',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.add_box_outlined),
+                  selectedIcon: Icon(Icons.add_box_rounded),
+                  label: 'Add Item',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.inventory_outlined),
+                  selectedIcon: Icon(Icons.inventory_rounded),
+                  label: 'Records',
+                ),
+              ],
+            )
+          : null,
+    );
+  }
+}
+
+class _AccountButton extends StatelessWidget {
+  const _AccountButton({required this.user, required this.auth});
+  final AppUser user;
+  final AuthService auth;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      key: const Key('accountMenu'),
+      tooltip: 'Account',
+      onSelected: (v) {
+        if (v == 'logout') auth.signOut();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user.email,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
+              Text(
+                '${user.roleLabel} account',
+                style: const TextStyle(color: AppColors.muted),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.add_box_outlined),
-            selectedIcon: Icon(Icons.add_box_rounded),
-            label: 'Add Item',
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          key: Key('logoutItem'),
+          value: 'logout',
+          child: Row(
+            children: [
+              Icon(Icons.logout_rounded, size: 18),
+              SizedBox(width: 10),
+              Text('Sign out'),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.inventory_outlined),
-            selectedIcon: Icon(Icons.inventory_rounded),
-            label: 'Inventory',
-          ),
-        ],
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 13,
+              backgroundColor: user.isAdmin
+                  ? AppColors.gold
+                  : AppColors.emerald,
+              child: Icon(
+                user.isAdmin
+                    ? Icons.admin_panel_settings_rounded
+                    : Icons.person_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              user.roleLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down_rounded, color: Colors.white),
+          ],
+        ),
       ),
     );
   }

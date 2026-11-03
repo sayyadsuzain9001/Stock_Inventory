@@ -11,6 +11,9 @@ class StockItem {
   final int reorderLevel;
   final DateTime? createdAt;
 
+  /// Email of the account that submitted the item (optional extra field).
+  final String? createdBy;
+
   const StockItem({
     this.id = '',
     required this.sku,
@@ -20,6 +23,7 @@ class StockItem {
     required this.unitPrice,
     required this.reorderLevel,
     this.createdAt,
+    this.createdBy,
   });
 
   /// Low stock rule from the brief: quantity <= reorderLevel.
@@ -42,6 +46,7 @@ class StockItem {
       unitPrice: (d['unitPrice'] as num?)?.toDouble() ?? 0,
       reorderLevel: (d['reorderLevel'] as num?)?.toInt() ?? 0,
       createdAt: ts is Timestamp ? ts.toDate() : null,
+      createdBy: d['createdBy'] as String?,
     );
   }
 
@@ -54,5 +59,6 @@ class StockItem {
     'unitPrice': unitPrice,
     'reorderLevel': reorderLevel,
     'createdAt': FieldValue.serverTimestamp(),
+    if (createdBy != null) 'createdBy': createdBy,
   };
 }

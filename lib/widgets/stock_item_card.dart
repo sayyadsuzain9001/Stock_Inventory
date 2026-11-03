@@ -136,7 +136,8 @@ class StockItemCard extends StatelessWidget {
                           const SizedBox(width: 5),
                           Flexible(
                             child: Text(
-                              'Submitted ${formatTimestamp(item.createdAt)}',
+                              'Submitted ${formatTimestamp(item.createdAt)}'
+                              '${item.createdBy != null ? ' by ${item.createdBy}' : ''}',
                               key: const Key('submittedAt'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

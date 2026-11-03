@@ -3,6 +3,7 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stock_inventory_lab/app.dart';
+import 'package:stock_inventory_lab/services/auth_service.dart';
 import 'package:stock_inventory_lab/models/stock_item.dart';
 import 'package:stock_inventory_lab/services/inventory_service.dart';
 
@@ -28,7 +29,14 @@ Future<void> pumpApp(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    StockInventoryApp(firestore: db, service: service, useGoogleFonts: false),
+    StockInventoryApp(
+      firestore: db,
+      auth: FakeAuthService(
+        initial: const AppUser(uid: 'a1', email: 'admin@stockinventory.com'),
+      ),
+      service: service,
+      useGoogleFonts: false,
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -153,6 +161,7 @@ void main() {
     expect(mouse['unitPrice'], isA<double>());
     expect(mouse['unitPrice'], 35.0);
     expect(mouse['createdAt'], isA<Timestamp>());
+    expect(mouse['createdBy'], 'admin@stockinventory.com');
 
     // Now on the Inventory tab, all three visible, each with its timestamp.
     expect(find.text('Showing 3 of 3 items'), findsOneWidget);

@@ -153,7 +153,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     bottom: 16,
                   ),
                   title: const Text(
-                    'Inventory',
+                    'All Records',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
