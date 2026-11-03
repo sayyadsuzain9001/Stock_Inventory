@@ -4,10 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stock_inventory_lab/app.dart';
 import 'package:stock_inventory_lab/services/auth_service.dart';
 
-Future<FakeAuthService> pump(
-  WidgetTester tester,
-  FakeFirebaseFirestore db,
-) async {
+Future<void> pump(WidgetTester tester, FakeFirebaseFirestore db) async {
   tester.view.physicalSize = const Size(1200, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -18,7 +15,11 @@ Future<FakeAuthService> pump(
     StockInventoryApp(firestore: db, auth: auth, useGoogleFonts: false),
   );
   await tester.pumpAndSettle();
-  return auth;
+}
+
+Future<void> openLogin(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('adminLoginButton')));
+  await tester.pumpAndSettle();
 }
 
 Future<void> login(WidgetTester tester, String email, String pw) async {
@@ -29,32 +30,40 @@ Future<void> login(WidgetTester tester, String email, String pw) async {
 }
 
 void main() {
-  testWidgets(
-    'signed-out users see the login screen; wrong password shows an error',
-    (tester) async {
-      await pump(tester, FakeFirebaseFirestore());
-      expect(find.text('Welcome back'), findsOneWidget);
-      await login(tester, 'admin@stockinventory.com', 'wrongpass');
-      expect(find.text('Wrong email or password.'), findsOneWidget);
-    },
-  );
-
-  testWidgets('normal user can submit but has no Records/Dashboard tabs', (
+  testWidgets('form is public: no login needed and no records tabs', (
     tester,
   ) async {
-    final db = FakeFirebaseFirestore();
-    await pump(tester, db);
-    await login(tester, 'user@stockinventory.com', 'User@4207');
+    await pump(tester, FakeFirebaseFirestore());
     expect(find.text('Add Stock Item'), findsOneWidget);
-    expect(find.text('Records'), findsNothing);
     expect(find.byType(NavigationBar), findsNothing);
-    expect(find.text('User'), findsOneWidget);
+    expect(find.text('Records'), findsNothing);
+    expect(find.byKey(const Key('adminLoginButton')), findsOneWidget);
   });
 
   testWidgets(
-    'admin sees Dashboard, Add Item and Records; sign out returns to login',
+    'admin login rejects non-admin email and wrong password; back returns to form',
     (tester) async {
       await pump(tester, FakeFirebaseFirestore());
+      await openLogin(tester);
+      expect(find.text('Admin sign in'), findsOneWidget);
+      await login(tester, 'user@stockinventory.com', 'User@4207');
+      expect(
+        find.text('Only the admin account can sign in here.'),
+        findsOneWidget,
+      );
+      await login(tester, 'admin@stockinventory.com', 'wrongpass');
+      expect(find.text('Wrong email or password.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('loginBack')));
+      await tester.pumpAndSettle();
+      expect(find.text('Add Stock Item'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'admin sees Dashboard and Records; sign out returns to public form',
+    (tester) async {
+      await pump(tester, FakeFirebaseFirestore());
+      await openLogin(tester);
       await login(tester, 'admin@stockinventory.com', 'Admin@4207');
       expect(find.text('Records'), findsOneWidget);
       expect(find.text('Admin'), findsOneWidget);
@@ -62,16 +71,37 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Sign out'));
       await tester.pumpAndSettle();
-      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.byKey(const Key('adminLoginButton')), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
     },
   );
 
-  testWidgets('register creates a normal user account', (tester) async {
-    await pump(tester, FakeFirebaseFirestore());
-    await tester.tap(find.byKey(const Key('toggleRegister')));
+  testWidgets('anonymous submission is saved without createdBy', (
+    tester,
+  ) async {
+    final db = FakeFirebaseFirestore();
+    await pump(tester, db);
+    await tester.enterText(find.byKey(const Key('skuField')), 'STK-301');
+    await tester.enterText(find.byKey(const Key('nameField')), 'Sugar 1kg');
+    await tester.enterText(find.byKey(const Key('qtyField')), '8');
+    await tester.enterText(find.byKey(const Key('reorderField')), '3');
+    await tester.enterText(find.byKey(const Key('priceField')), '3.20');
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) =>
+            w.key is ValueKey &&
+            '${(w.key as ValueKey).value}'.startsWith('categoryField'),
+      ),
+    );
     await tester.pumpAndSettle();
-    await login(tester, 'new@student.my', 'secret12');
-    expect(find.text('Add Stock Item'), findsOneWidget);
-    expect(find.text('Records'), findsNothing);
+    await tester.tap(find.text('Grocery').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('saveButton')));
+    await tester.tap(find.byKey(const Key('saveButton')));
+    await tester.pumpAndSettle();
+    expect(find.text('Add another item'), findsOneWidget);
+    final docs = (await db.collection('stockItems').get()).docs;
+    expect(docs.length, 1);
+    expect(docs.first.data().containsKey('createdBy'), isFalse);
   });
 }

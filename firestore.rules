@@ -1,6 +1,6 @@
 rules_version = '2';
-// stockItems: any signed-in user may submit a valid item; only the admin
-// account can read (retrieve) records. Items cannot be edited or deleted.
+// stockItems: anyone may submit a valid item (no login needed); only the
+// admin account can read (retrieve) records. Items cannot be edited or deleted.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAdmin() {
@@ -9,8 +9,7 @@ service cloud.firestore {
     }
     match /stockItems/{id} {
       allow read: if isAdmin();
-      allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['sku','itemName','category','quantity','unitPrice','reorderLevel','createdAt','createdBy'])
+      allow create: if request.resource.data.keys().hasOnly(['sku','itemName','category','quantity','unitPrice','reorderLevel','createdAt','createdBy'])
         && request.resource.data.sku is string && request.resource.data.sku.matches('^STK-[0-9]{3}$')
         && request.resource.data.itemName is string && request.resource.data.itemName.size() >= 3
         && request.resource.data.category in ['Electronics','Stationery','Hardware','Grocery']
@@ -18,7 +17,9 @@ service cloud.firestore {
         && request.resource.data.reorderLevel is int && request.resource.data.reorderLevel >= 0
         && request.resource.data.unitPrice is number && request.resource.data.unitPrice > 0
         && request.resource.data.createdAt == request.time
-        && request.resource.data.createdBy == request.auth.token.email;
+        && (!('createdBy' in request.resource.data)
+            || (request.auth != null
+                && request.resource.data.createdBy == request.auth.token.email));
       allow update, delete: if false;
     }
   }

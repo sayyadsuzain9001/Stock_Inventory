@@ -13,13 +13,10 @@ flutter test                   # 28 unit + widget tests
 ```
 Firestore rules are in `firestore.rules`. Paste them into the console under Firestore > Rules.
 
-## Login and roles (Firebase Authentication, Email/Password)
-| Role | Demo account | Can do |
-|---|---|---|
-| Admin | `admin@stockinventory.com` / `Admin@4207` | Dashboard, add items, **All Records**: every submission with its timestamp, who submitted it, and the search, category, low-stock, date and sort filters |
-| User | `user@stockinventory.com` / `User@4207` (or create an account on the login screen) | Submit the stock form only |
-
-The admin role is the email listed in `kAdminEmails` (`lib/services/auth_service.dart`). Firestore rules enforce the same split. Only the admin can **read** `stockItems`. Any signed-in user can **create** a valid item, with `createdBy` set to their own email. Nobody can edit or delete items.
+## Admin login (Firebase Authentication, Email/Password)
+- **Anyone** can open the app and submit the stock form. No login is needed.
+- The **Admin login** button (top left) opens the admin sign-in: `admin@stockinventory.com` / `Admin@4207`. After signing in, the admin gets the **Dashboard**, **Add Item** and **All Records** pages. All Records shows every submission with its timestamp and the search, category, low-stock, date and sort filters. **Sign out** returns to the public form.
+- Firestore rules enforce this. Only the admin can **read** `stockItems`. Anyone can **create** a valid item. Nobody can edit or delete items. The admin email is set in `kAdminEmails` (`lib/services/auth_service.dart`).
 
 ## `stockItems` schema (auto document ID)
 | Field | Type | Rule |
@@ -31,7 +28,7 @@ The admin role is the email listed in `kAdminEmails` (`lib/services/auth_service
 | unitPrice | Number | RM greater than 0 (at most 2 decimals) |
 | reorderLevel | Integer | whole number, 0 or more |
 | createdAt | Timestamp | `FieldValue.serverTimestamp()` |
-| createdBy | String | email of the signed-in submitter (extra audit field) |
+| createdBy | String | optional; set when the admin submits (extra audit field) |
 
 ## How it works
 **Validation.** The `Form` uses a `GlobalKey<FormState>`. `validate()` must pass before `add()` is called, so invalid input never reaches Firestore, and each field shows its own error. While saving, the Save button shows a spinner. The success dialog and SnackBar appear only after Firestore acknowledges the write. If the write fails, a red SnackBar appears and the form keeps what you typed.
@@ -57,7 +54,7 @@ Note: Flutter Web stores a price such as `35.00` as an integer, so the app reads
 | 4 | Search `STK-102` with All | Notebook | Notebook only | `09_sku_search.png` |
 | 5 | Low stock only | STK-101 and STK-103 | STK-103 and STK-101 | `10_low_stock.png` |
 | 6 | Sort quantity ascending | STK-103, STK-101, then STK-102 | 103 (1), 101 (4), 104 (12), 102 (25) | `11_sort_ascending.png` |
-| 9 | Wrong password, then user login, then admin login | Error message; user can only submit; admin sees every record | "Wrong email or password." shown. The user saved STK-105 and has no Records tab, and Firestore refused the user's read. The admin sees STK-105 "by user@stockinventory.com" | `22_login.png`, `23_login_error.png`, `26_user_form.png`, `27_user_saved.png`, `25_admin_records.png` |
+| 9 | Public form, then admin login with a wrong password, then the correct one | Form works without login; records only after admin login | Item saved with no login; "Wrong email or password." shown; admin sees All Records; anonymous Firestore read refused | `22_login.png`, `23_login_error.png`, `26_user_form.png`, `27_user_saved.png`, `25_admin_records.png` |
 | 7 | Clear Filters after a combined search | Full list | Showing 4 of 4 | `08_cleared.png` |
 | 8 | Inventory after saving, with Today filter and Oldest first | Every record shows its submitted date and time and can be filtered by date | 4 of 4 records shown, each with a timestamp. Oldest first gives 101, 102, 103, 104 | `17_records_with_timestamps.png`, `18_filter_today.png`, `19_sort_menu.png`, `20_sort_oldest.png`, `21_pick_dates.png` |
 

@@ -2,28 +2,27 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Email addresses that get the admin role (records, dashboard, filters).
-/// Every other signed-in account is a normal user who can submit items.
+/// The only accounts allowed to sign in (dashboard, add items, records).
 const List<String> kAdminEmails = ['admin@stockinventory.com'];
 
 bool isAdminEmail(String? email) =>
     email != null && kAdminEmails.contains(email.trim().toLowerCase());
 
-/// The signed-in person and their role.
+/// The signed-in person.
 class AppUser {
   final String uid;
   final String email;
   const AppUser({required this.uid, required this.email});
 
   bool get isAdmin => isAdminEmail(email);
-  String get roleLabel => isAdmin ? 'Admin' : 'User';
 }
 
 /// Sign-in abstraction so the UI can be tested without Firebase.
+/// Only admin accounts may sign in; any other account is signed straight
+/// back out and gets a `not-admin` error.
 abstract class AuthService {
   Stream<AppUser?> authStateChanges();
   Future<void> signIn(String email, String password);
-  Future<void> register(String email, String password);
   Future<void> signOut();
 }
 
@@ -40,12 +39,16 @@ class FirebaseAuthService implements AuthService {
   Stream<AppUser?> authStateChanges() => auth.authStateChanges().map(_map);
 
   @override
-  Future<void> signIn(String email, String password) =>
-      auth.signInWithEmailAndPassword(email: email.trim(), password: password);
-
-  @override
-  Future<void> register(String email, String password) => auth
-      .createUserWithEmailAndPassword(email: email.trim(), password: password);
+  Future<void> signIn(String email, String password) async {
+    final cred = await auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+    if (!isAdminEmail(cred.user?.email)) {
+      await auth.signOut();
+      throw FirebaseAuthException(code: 'not-admin');
+    }
+  }
 
   @override
   Future<void> signOut() => auth.signOut();
@@ -75,16 +78,9 @@ class FakeAuthService implements AuthService {
     if (accounts[e] != password) {
       throw FirebaseAuthException(code: 'invalid-credential');
     }
-    _emit(AppUser(uid: 'uid-$e', email: e));
-  }
-
-  @override
-  Future<void> register(String email, String password) async {
-    final e = email.trim().toLowerCase();
-    if (accounts.containsKey(e)) {
-      throw FirebaseAuthException(code: 'email-already-in-use');
+    if (!isAdminEmail(e)) {
+      throw FirebaseAuthException(code: 'not-admin');
     }
-    accounts[e] = password;
     _emit(AppUser(uid: 'uid-$e', email: e));
   }
 
@@ -101,10 +97,8 @@ String authErrorMessage(Object e) {
     case 'user-not-found':
     case 'invalid-login-credentials':
       return 'Wrong email or password.';
-    case 'email-already-in-use':
-      return 'That email already has an account. Sign in instead.';
-    case 'weak-password':
-      return 'Password must be at least 6 characters.';
+    case 'not-admin':
+      return 'Only the admin account can sign in.';
     case 'invalid-email':
       return 'Enter a valid email address.';
     case 'operation-not-allowed':

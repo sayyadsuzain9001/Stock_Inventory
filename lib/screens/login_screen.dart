@@ -5,7 +5,8 @@ import '../services/auth_service.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-/// Sign in / create account. Admins see all records; users submit items.
+/// Admin sign in. The stock form is public; only the admin signs in to see
+/// every submitted record, the filters and the dashboard.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.auth});
   final AuthService auth;
@@ -18,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _register = false;
   bool _busy = false;
   bool _obscure = true;
   String? _error;
@@ -32,16 +32,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!isAdminEmail(_email.text)) {
+      setState(() => _error = 'Only the admin account can sign in here.');
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      if (_register) {
-        await widget.auth.register(_email.text, _password.text);
-      } else {
-        await widget.auth.signIn(_email.text, _password.text);
-      }
+      await widget.auth.signIn(_email.text, _password.text);
+      if (mounted) Navigator.of(context).maybePop();
     } catch (e) {
       if (mounted) setState(() => _error = authErrorMessage(e));
     } finally {
@@ -51,6 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canGoBack = Navigator.of(context).canPop();
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -72,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(22),
                         ),
                         child: const Icon(
-                          Icons.inventory_2_rounded,
+                          Icons.admin_panel_settings_rounded,
                           color: Colors.white,
                           size: 38,
                         ),
@@ -82,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        'StockPilot',
+                        'StockPilot Admin',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(color: Colors.white),
                       ),
@@ -104,6 +106,23 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+          if (canGoBack)
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextButton.icon(
+                    key: const Key('loginBack'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text('Back to form'),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -129,15 +148,13 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              _register ? 'Create an account' : 'Welcome back',
+              'Admin sign in',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text(
-              _register
-                  ? 'New accounts can submit stock items.'
-                  : 'Admins manage records. Users submit stock items.',
-              style: const TextStyle(color: AppColors.muted),
+            const Text(
+              'View every submitted record with timestamps, filters and the dashboard.',
+              style: TextStyle(color: AppColors.muted),
             ),
             const SizedBox(height: 18),
             TextFormField(
@@ -210,28 +227,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             GradientButton(
               key: const Key('loginButton'),
-              label: _register ? 'Create account' : 'Sign in',
-              busyLabel: _register ? 'Creating...' : 'Signing in...',
-              icon: _register
-                  ? Icons.person_add_alt_1_rounded
-                  : Icons.login_rounded,
+              label: 'Sign in',
+              busyLabel: 'Signing in...',
+              icon: Icons.login_rounded,
               busy: _busy,
               onPressed: _submit,
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              key: const Key('toggleRegister'),
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                      _register = !_register;
-                      _error = null;
-                    }),
-              child: Text(
-                _register
-                    ? 'Already have an account? Sign in'
-                    : 'New here? Create an account',
-              ),
             ),
           ],
         ),

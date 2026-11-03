@@ -44,8 +44,12 @@ class StockInventoryApp extends StatelessWidget {
           final user = snap.data;
           return AnimatedSwitcher(
             duration: const Duration(milliseconds: 350),
-            child: user == null
-                ? LoginScreen(key: const ValueKey('login'), auth: auth)
+            child: user == null || !user.isAdmin
+                ? PublicFormPage(
+                    key: const ValueKey('public'),
+                    service: inventory,
+                    auth: auth,
+                  )
                 : HomeShell(
                     key: ValueKey('home_${user.uid}'),
                     service: inventory,
@@ -59,8 +63,72 @@ class StockInventoryApp extends StatelessWidget {
   }
 }
 
-/// Admin: Dashboard, Add Item and Records (all submissions + filters).
-/// User:  Add Item only (records are visible to admins).
+/// Public start page: anyone can submit the stock form without logging in.
+/// The "Admin" button opens the admin sign-in.
+class PublicFormPage extends StatelessWidget {
+  const PublicFormPage({super.key, required this.service, required this.auth});
+  final InventoryService service;
+  final AuthService auth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        AddItemScreen(service: service),
+        Positioned(
+          top: 0,
+          left: 0,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  key: const Key('adminLoginButton'),
+                  borderRadius: BorderRadius.circular(30),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => LoginScreen(auth: auth)),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 14, 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.admin_panel_settings_rounded,
+                          color: AppColors.gold,
+                          size: 20,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Admin login',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Admin area: Dashboard, Add Item and All Records (every submission with
+/// timestamps and filters).
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
