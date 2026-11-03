@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../models/stock_item.dart';
 import '../theme.dart';
+import '../utils/inventory_filter.dart' show formatTimestamp;
 import 'common.dart';
 
 /// Readable card for one Firestore stock item.
 class StockItemCard extends StatelessWidget {
-  const StockItemCard({super.key, required this.item});
+  const StockItemCard({
+    super.key,
+    required this.item,
+    this.showTimestamp = true,
+  });
   final StockItem item;
+
+  /// Off for the live preview on the form (nothing submitted yet).
+  final bool showTimestamp;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +125,31 @@ class StockItemCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
+                    if (showTimestamp) ...[
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: AppColors.muted,
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              'Submitted ${formatTimestamp(item.createdAt)}',
+                              key: const Key('submittedAt'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Row(
                       children: [
                         Flexible(

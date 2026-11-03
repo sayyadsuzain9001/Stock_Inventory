@@ -261,6 +261,7 @@ class _AddItemScreenState extends State<AddItemScreen>
                         child: StockItemCard(
                           key: ValueKey(_category),
                           item: _preview,
+                          showTimestamp: false,
                         ),
                       ),
                       const SizedBox(height: 8),

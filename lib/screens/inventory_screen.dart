@@ -23,6 +23,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   String _category = 'All';
   bool _lowStockOnly = false;
   QtySort _sort = QtySort.newest;
+  DateFilter _dateFilter = DateFilter.all;
+  DateTime? _customFrom;
+  DateTime? _customTo;
   late Stream<InventorySnapshot> _stream;
 
   @override
@@ -41,6 +44,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _search.text.trim().isNotEmpty ||
       _category != 'All' ||
       _lowStockOnly ||
+      _dateFilter != DateFilter.all ||
       _sort != QtySort.newest;
 
   void _clearFilters() {
@@ -49,7 +53,83 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _category = 'All';
       _lowStockOnly = false;
       _sort = QtySort.newest;
+      _dateFilter = DateFilter.all;
+      _customFrom = null;
+      _customTo = null;
     });
+  }
+
+  ({DateTime? from, DateTime? to}) get _dateRange =>
+      _dateFilter == DateFilter.custom
+      ? (from: _customFrom, to: _customTo)
+      : rangeFor(_dateFilter);
+
+  Future<void> _pickDates() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2),
+      lastDate: DateTime(now.year, now.month, now.day),
+      initialDateRange: _customFrom != null && _customTo != null
+          ? DateTimeRange(start: _customFrom!, end: _customTo!)
+          : null,
+      helpText: 'Show records submitted between',
+      builder: (context, child) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440, maxHeight: 640),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: child,
+          ),
+        ),
+      ),
+    );
+    if (picked == null) return;
+    setState(() {
+      _dateFilter = DateFilter.custom;
+      _customFrom = picked.start;
+      _customTo = picked.end;
+    });
+  }
+
+  static const _sortLabels = {
+    QtySort.newest: 'Newest first',
+    QtySort.oldest: 'Oldest first',
+    QtySort.ascending: 'Quantity: low to high',
+    QtySort.descending: 'Quantity: high to low',
+  };
+  static const _sortIcons = {
+    QtySort.newest: Icons.schedule_rounded,
+    QtySort.oldest: Icons.history_rounded,
+    QtySort.ascending: Icons.arrow_upward_rounded,
+    QtySort.descending: Icons.arrow_downward_rounded,
+  };
+
+  Widget _dateChip(
+    String label,
+    DateFilter f,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    final selected = _dateFilter == f;
+    return ChoiceChip(
+      key: Key('date_${f.name}'),
+      label: Text(label),
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: selected ? Colors.white : AppColors.indigo,
+      ),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: AppColors.indigo,
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : AppColors.ink,
+        fontWeight: FontWeight.w600,
+      ),
+      onSelected: (_) =>
+          onTap != null ? onTap() : setState(() => _dateFilter = f),
+    );
   }
 
   void _retry() => setState(() => _stream = widget.service.watchItems());
@@ -174,6 +254,52 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              Row(
+                children: const [
+                  Icon(
+                    Icons.event_note_rounded,
+                    size: 16,
+                    color: AppColors.muted,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'SUBMITTED',
+                    style: TextStyle(
+                      fontSize: 11,
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _dateChip(
+                    'All time',
+                    DateFilter.all,
+                    Icons.all_inclusive_rounded,
+                  ),
+                  _dateChip('Today', DateFilter.today, Icons.today_rounded),
+                  _dateChip(
+                    'Last 7 days',
+                    DateFilter.last7Days,
+                    Icons.date_range_rounded,
+                  ),
+                  _dateChip(
+                    _dateFilter == DateFilter.custom && _customFrom != null
+                        ? '${formatDate(_customFrom!)} – ${formatDate(_customTo!)}'
+                        : 'Pick dates…',
+                    DateFilter.custom,
+                    Icons.edit_calendar_rounded,
+                    onTap: _pickDates,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
@@ -196,35 +322,66 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                     onSelected: (v) => setState(() => _lowStockOnly = v),
                   ),
-                  SegmentedButton<QtySort>(
+                  PopupMenuButton<QtySort>(
                     key: const Key('sortControl'),
-                    showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      selectedBackgroundColor: AppColors.indigo,
-                      selectedForegroundColor: Colors.white,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    segments: const [
-                      ButtonSegment(
-                        value: QtySort.newest,
-                        label: Text('Newest'),
-                        icon: Icon(Icons.schedule_rounded, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: QtySort.ascending,
-                        label: Text('Qty'),
-                        icon: Icon(Icons.arrow_upward_rounded, size: 18),
-                        tooltip: 'Quantity ascending',
-                      ),
-                      ButtonSegment(
-                        value: QtySort.descending,
-                        label: Text('Qty'),
-                        icon: Icon(Icons.arrow_downward_rounded, size: 18),
-                        tooltip: 'Quantity descending',
-                      ),
+                    tooltip: 'Sort records',
+                    initialValue: _sort,
+                    onSelected: (v) => setState(() => _sort = v),
+                    itemBuilder: (_) => [
+                      for (final v in QtySort.values)
+                        PopupMenuItem(
+                          key: Key('sort_${v.name}'),
+                          value: v,
+                          child: Row(
+                            children: [
+                              Icon(_sortIcons[v], size: 18),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  _sortLabels[v]!,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
-                    selected: {_sort},
-                    onSelectionChanged: (s) => setState(() => _sort = s.first),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.indigo,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _sortIcons[_sort],
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              'Sort: ${_sortLabels[_sort]}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_drop_down_rounded,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   AnimatedOpacity(
                     opacity: _anyFilterActive ? 1 : 0.45,
@@ -312,6 +469,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       keyword: _search.text,
       category: _category,
       lowStockOnly: _lowStockOnly,
+      from: _dateRange.from,
+      to: _dateRange.to,
       sort: _sort,
     );
 

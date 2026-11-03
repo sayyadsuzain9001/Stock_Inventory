@@ -35,6 +35,8 @@ Firestore rules are in `firestore.rules`. Paste them into the console under Fire
 - **Low stock only** keeps items where `quantity <= reorderLevel`.
 - **Sort** orders by quantity, ascending or descending. **Clear Filters** resets every control.
 
+**Submitted records.** Every record card shows **when it was submitted**, which is its `createdAt` server timestamp shown in local time. Saved items appear at the top of the list right away. The **Submitted** filter offers All time, Today, Last 7 days, or **Pick dates…**, which opens a date-range picker. The sort menu orders records by Newest first, Oldest first, or Quantity (low to high, or high to low). The date filter is combined with all the other filters using AND.
+
 Note: Flutter Web stores a price such as `35.00` as an integer, so the app reads prices back as `num`.
 
 ## Test log (live Firestore project `stockinvetory`)
@@ -47,6 +49,7 @@ Note: Flutter Web stores a price such as `35.00` as an integer, so the app reads
 | 5 | Low stock only | STK-101 and STK-103 | STK-103 and STK-101 | `10_low_stock.png` |
 | 6 | Sort quantity ascending | STK-103, STK-101, then STK-102 | 103 (1), 101 (4), 104 (12), 102 (25) | `11_sort_ascending.png` |
 | 7 | Clear Filters after a combined search | Full list | Showing 4 of 4 | `08_cleared.png` |
+| 8 | Inventory after saving, with Today filter and Oldest first | Every record shows its submitted date and time and can be filtered by date | 4 of 4 records shown, each with a timestamp. Oldest first gives 101, 102, 103, 104 | `17_records_with_timestamps.png`, `18_filter_today.png`, `19_sort_menu.png`, `20_sort_oldest.png`, `21_pick_dates.png` |
 
 STK-104 (Claw Hammer, Hardware) is an extra realistic item, which the brief allows. Screenshots are in `docs/screenshots/`, and `14`–`16` show the phone layout.
 

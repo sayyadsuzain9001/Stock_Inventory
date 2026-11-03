@@ -154,8 +154,24 @@ void main() {
     expect(mouse['unitPrice'], 35.0);
     expect(mouse['createdAt'], isA<Timestamp>());
 
-    // Now on the Inventory tab, all three visible.
+    // Now on the Inventory tab, all three visible, each with its timestamp.
     expect(find.text('Showing 3 of 3 items'), findsOneWidget);
+    expect(find.byKey(const Key('submittedAt')), findsNWidgets(3));
+    expect(find.textContaining('Submitted '), findsNWidgets(3));
+
+    // Today filter keeps all three (just submitted).
+    await tester.tap(find.byKey(const Key('date_today')));
+    await tester.pumpAndSettle();
+    expect(find.text('Showing 3 of 3 items'), findsOneWidget);
+
+    // Sort menu: quantity low to high.
+    await tester.tap(find.byKey(const Key('sortControl')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Quantity: low to high').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Sort: Quantity: low to high'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('clearFilters')));
+    await tester.pumpAndSettle();
 
     // Combined: "mouse" + Electronics + low stock -> only STK-103.
     await tester.enterText(find.byKey(const Key('searchField')), 'mouse');
