@@ -49,3 +49,6 @@ Note: Flutter Web stores a price such as `35.00` as an integer, so the app reads
 | 7 | Clear Filters after a combined search | Full list | Showing 4 of 4 | `08_cleared.png` |
 
 STK-104 (Claw Hammer, Hardware) is an extra realistic item, which the brief allows. Screenshots are in `docs/screenshots/`, and `14`–`16` show the phone layout.
+
+## Live demo
+https://sayyadsuzain9001.github.io/Stock_Inventory/ (deployed automatically by `.github/workflows/deploy-pages.yml` on every push to `main`).
