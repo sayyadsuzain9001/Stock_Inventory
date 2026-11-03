@@ -1,0 +1,116 @@
+{
+  "documents": [
+    {
+      "name": "projects/stockinvetory/databases/(default)/documents/stockItems/6e3tNs9F9H84W1wvilH5",
+      "fields": {
+        "sku": {
+          "stringValue": "STK-101"
+        },
+        "category": {
+          "stringValue": "Electronics"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-03T00:40:15.444Z"
+        },
+        "reorderLevel": {
+          "integerValue": "5"
+        },
+        "quantity": {
+          "integerValue": "4"
+        },
+        "itemName": {
+          "stringValue": "USB C Cable"
+        },
+        "unitPrice": {
+          "doubleValue": 19.9
+        }
+      },
+      "createTime": "2026-11-03T00:40:15.924070Z",
+      "updateTime": "2026-11-03T00:40:15.924070Z"
+    },
+    {
+      "name": "projects/stockinvetory/databases/(default)/documents/stockItems/BDivY3dkj9704MHxPnB1",
+      "fields": {
+        "category": {
+          "stringValue": "Stationery"
+        },
+        "unitPrice": {
+          "doubleValue": 4.5
+        },
+        "reorderLevel": {
+          "integerValue": "10"
+        },
+        "sku": {
+          "stringValue": "STK-102"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-03T00:40:23.747Z"
+        },
+        "itemName": {
+          "stringValue": "Notebook"
+        },
+        "quantity": {
+          "integerValue": "25"
+        }
+      },
+      "createTime": "2026-11-03T00:40:23.852242Z",
+      "updateTime": "2026-11-03T00:40:23.852242Z"
+    },
+    {
+      "name": "projects/stockinvetory/databases/(default)/documents/stockItems/PHOB5pWCivTXV0YTk5DB",
+      "fields": {
+        "category": {
+          "stringValue": "Hardware"
+        },
+        "unitPrice": {
+          "doubleValue": 28.5
+        },
+        "sku": {
+          "stringValue": "STK-104"
+        },
+        "itemName": {
+          "stringValue": "Claw Hammer"
+        },
+        "quantity": {
+          "integerValue": "12"
+        },
+        "reorderLevel": {
+          "integerValue": "4"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-03T00:42:40.708Z"
+        }
+      },
+      "createTime": "2026-11-03T00:42:40.749674Z",
+      "updateTime": "2026-11-03T00:42:40.749674Z"
+    },
+    {
+      "name": "projects/stockinvetory/databases/(default)/documents/stockItems/bMVkI8eFvPHttEAop2b8",
+      "fields": {
+        "sku": {
+          "stringValue": "STK-103"
+        },
+        "unitPrice": {
+          "integerValue": "35"
+        },
+        "itemName": {
+          "stringValue": "Wireless Mouse"
+        },
+        "quantity": {
+          "integerValue": "1"
+        },
+        "category": {
+          "stringValue": "Electronics"
+        },
+        "reorderLevel": {
+          "integerValue": "3"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-03T00:40:35.407Z"
+        }
+      },
+      "createTime": "2026-11-03T00:40:35.556259Z",
+      "updateTime": "2026-11-03T00:40:35.556259Z"
+    }
+  ]
+}

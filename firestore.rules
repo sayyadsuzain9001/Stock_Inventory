@@ -1,0 +1,22 @@
+rules_version = '2';
+// Example rules for the stockItems collection (classroom use).
+// They also validate the schema server-side, matching the form rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /stockItems/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['sku','itemName','category','quantity','unitPrice','reorderLevel','createdAt'])
+                    && request.resource.data.sku is string
+                    && request.resource.data.sku.matches('^STK-[0-9]{3}$')
+                    && request.resource.data.itemName is string
+                    && request.resource.data.itemName.size() >= 3
+                    && request.resource.data.category in ['Electronics','Stationery','Hardware','Grocery']
+                    && request.resource.data.quantity is int && request.resource.data.quantity >= 0
+                    && request.resource.data.reorderLevel is int && request.resource.data.reorderLevel >= 0
+                    && request.resource.data.unitPrice is number && request.resource.data.unitPrice > 0
+                    && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}
