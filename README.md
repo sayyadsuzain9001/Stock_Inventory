@@ -4,19 +4,17 @@ A Flutter app for a small retailer. It saves stock items to **Cloud Firestore**,
 
 ## Setup and run
 - **Firebase project ID:** `stockinvetory` (Web app config in `lib/firebase_options.dart`. These are public client IDs, and no keys or service accounts are committed.)
-- **Packages:** `firebase_core`, `cloud_firestore`, `firebase_auth`, `google_fonts`, `flutter_animate`. Dev: `fake_cloud_firestore`.
+- **Packages:** `firebase_core`, `cloud_firestore`, `google_fonts`, `flutter_animate`. Dev: `fake_cloud_firestore`.
 
 ```bash
 flutter pub get
 flutter run -d chrome          # or: flutter run -d edge / windows
-flutter test                   # 28 unit + widget tests
+flutter test                   # unit + widget tests
 ```
 Firestore rules are in `firestore.rules`. Paste them into the console under Firestore > Rules.
 
-## Admin login (Firebase Authentication, Email/Password)
-- **Anyone** can open the app and submit the stock form. No login is needed.
-- The **Admin login** button (top left) opens the admin sign-in: `admin@stockinventory.com` / `Admin@4207`. After signing in, the admin gets the **Dashboard**, **Add Item** and **All Records** pages. All Records shows every submission with its timestamp and the search, category, low-stock, date and sort filters. **Sign out** returns to the public form.
-- Firestore rules enforce this. Only the admin can **read** `stockItems`. Anyone can **create** a valid item. Nobody can edit or delete items. The admin email is set in `kAdminEmails` (`lib/services/auth_service.dart`).
+## App layout (no login)
+The app opens straight to the admin panel, with no sign-in. It has three pages: **Dashboard** (stats and low stock), **Add Item** (the form) and **All Records** (every submission with its timestamp and the search, category, low-stock, date and sort filters). Firestore rules allow anyone to read and to create valid items, and block edits and deletes.
 
 ## `stockItems` schema (auto document ID)
 | Field | Type | Rule |
@@ -28,7 +26,6 @@ Firestore rules are in `firestore.rules`. Paste them into the console under Fire
 | unitPrice | Number | RM greater than 0 (at most 2 decimals) |
 | reorderLevel | Integer | whole number, 0 or more |
 | createdAt | Timestamp | `FieldValue.serverTimestamp()` |
-| createdBy | String | optional; set when the admin submits (extra audit field) |
 
 ## How it works
 **Validation.** The `Form` uses a `GlobalKey<FormState>`. `validate()` must pass before `add()` is called, so invalid input never reaches Firestore, and each field shows its own error. While saving, the Save button shows a spinner. The success dialog and SnackBar appear only after Firestore acknowledges the write. If the write fails, a red SnackBar appears and the form keeps what you typed.
@@ -54,7 +51,6 @@ Note: Flutter Web stores a price such as `35.00` as an integer, so the app reads
 | 4 | Search `STK-102` with All | Notebook | Notebook only | `09_sku_search.png` |
 | 5 | Low stock only | STK-101 and STK-103 | STK-103 and STK-101 | `10_low_stock.png` |
 | 6 | Sort quantity ascending | STK-103, STK-101, then STK-102 | 103 (1), 101 (4), 104 (12), 102 (25) | `11_sort_ascending.png` |
-| 9 | Public form, then admin login with a wrong password, then the correct one | Form works without login; records only after admin login | Item saved with no login; "Wrong email or password." shown; admin sees All Records; anonymous Firestore read refused | `22_login.png`, `23_login_error.png`, `26_user_form.png`, `27_user_saved.png`, `25_admin_records.png` |
 | 7 | Clear Filters after a combined search | Full list | Showing 4 of 4 | `08_cleared.png` |
 | 8 | Inventory after saving, with Today filter and Oldest first | Every record shows its submitted date and time and can be filtered by date | 4 of 4 records shown, each with a timestamp. Oldest first gives 101, 102, 103, 104 | `17_records_with_timestamps.png`, `18_filter_today.png`, `19_sort_menu.png`, `20_sort_oldest.png`, `21_pick_dates.png` |
 

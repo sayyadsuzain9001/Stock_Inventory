@@ -3,7 +3,6 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stock_inventory_lab/app.dart';
-import 'package:stock_inventory_lab/services/auth_service.dart';
 
 void main() {
   for (final size in const [Size(360, 740), Size(412, 915), Size(1366, 768)]) {
@@ -38,16 +37,7 @@ void main() {
         });
       }
       await tester.pumpWidget(
-        StockInventoryApp(
-          firestore: db,
-          auth: FakeAuthService(
-            initial: const AppUser(
-              uid: 'a1',
-              email: 'admin@stockinventory.com',
-            ),
-          ),
-          useGoogleFonts: false,
-        ),
+        StockInventoryApp(firestore: db, useGoogleFonts: false),
       );
       await tester.pumpAndSettle();
       for (final tab in ['Add Item', 'Records', 'Dashboard']) {

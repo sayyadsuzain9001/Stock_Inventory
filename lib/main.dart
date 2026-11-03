@@ -1,12 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app.dart';
-import 'services/auth_service.dart';
 import 'firebase_options.dart';
 
 /// Optional: run against the local Firestore emulator with
@@ -22,15 +20,9 @@ Future<void> main() async {
         ? '10.0.2.2'
         : 'localhost';
     db.useFirestoreEmulator(host, 8080);
-    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
   }
   await _preloadFonts();
-  runApp(
-    StockInventoryApp(
-      firestore: db,
-      auth: FirebaseAuthService(FirebaseAuth.instance),
-    ),
-  );
+  runApp(StockInventoryApp(firestore: db));
 }
 
 /// Loads every font weight used by the UI before the first frame so chips

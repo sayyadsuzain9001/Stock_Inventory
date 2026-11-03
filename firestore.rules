@@ -1,25 +1,18 @@
 rules_version = '2';
-// stockItems: anyone may submit a valid item (no login needed); only the
-// admin account can read (retrieve) records. Items cannot be edited or deleted.
+// stockItems: open classroom app (no login). Anyone can read records and
+// create a valid item; items cannot be edited or deleted.
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() {
-      return request.auth != null
-        && request.auth.token.email in ['admin@stockinventory.com'];
-    }
     match /stockItems/{id} {
-      allow read: if isAdmin();
-      allow create: if request.resource.data.keys().hasOnly(['sku','itemName','category','quantity','unitPrice','reorderLevel','createdAt','createdBy'])
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['sku','itemName','category','quantity','unitPrice','reorderLevel','createdAt'])
         && request.resource.data.sku is string && request.resource.data.sku.matches('^STK-[0-9]{3}$')
         && request.resource.data.itemName is string && request.resource.data.itemName.size() >= 3
         && request.resource.data.category in ['Electronics','Stationery','Hardware','Grocery']
         && request.resource.data.quantity is int && request.resource.data.quantity >= 0
         && request.resource.data.reorderLevel is int && request.resource.data.reorderLevel >= 0
         && request.resource.data.unitPrice is number && request.resource.data.unitPrice > 0
-        && request.resource.data.createdAt == request.time
-        && (!('createdBy' in request.resource.data)
-            || (request.auth != null
-                && request.resource.data.createdBy == request.auth.token.email));
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
   }
